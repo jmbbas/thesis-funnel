@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Thesis Funnel</title>
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icon-192.png">
+<link rel="apple-touch-icon" href="icon-192.png">
+<meta name="theme-color" content="#f5efe3" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#121417" media="(prefers-color-scheme: dark)">
+<style>
+  :root { --bg: #f5efe3; --fg: #2a2520; --muted: #75695c; --line: #e2d9c8; --surface: #fbf7ef; }
+  @media (prefers-color-scheme: dark) {
+    :root { --bg: #121417; --fg: #e8eaed; --muted: #9aa3ad; --line: #2c3137; --surface: #1b1e22; }
+  }
+  html, body { margin: 0; height: 100%; background: var(--bg); color: var(--fg);
+               font: 15px/1.4 -apple-system, "Segoe UI", Roboto, Arial, sans-serif; }
+  iframe { position: fixed; inset: 0; width: 100%; height: 100%; border: 0; display: none; }
+  .setup { max-width: 480px; margin: 0 auto; padding: 32px 16px; display: none; }
+  .setup h1 { font-size: 22px; margin: 0 0 6px; }
+  .setup p { color: var(--muted); margin: 0 0 20px; }
+  label { display: block; font-weight: 600; margin: 14px 0 6px; }
+  input { width: 100%; box-sizing: border-box; padding: 10px 12px; border: 1px solid var(--line);
+          border-radius: 9px; background: var(--surface); color: var(--fg); font: inherit; }
+  button { margin-top: 20px; width: 100%; padding: 12px; border: 0; border-radius: 9px;
+           background: var(--fg); color: var(--bg); font: inherit; font-weight: 700; }
+  .reset { position: fixed; right: 8px; bottom: 8px; width: auto; margin: 0; padding: 6px 10px;
+           font-size: 12px; background: var(--surface); color: var(--muted); border: 1px solid var(--line);
+           display: none; }
+</style>
+</head>
+<body>
+<div class="setup" id="setup">
+  <h1>Thesis Funnel</h1>
+  <p>One-time setup on this phone. Nothing is stored anywhere except this device.</p>
+  <label for="url">Apps Script web app URL (ends in /exec)</label>
+  <input id="url" type="url" placeholder="https://script.google.com/macros/s/.../exec" autocomplete="off">
+  <label for="key">App key</label>
+  <input id="key" type="password" autocomplete="off">
+  <button id="save">Save and open</button>
+</div>
+<iframe id="app" title="Thesis Funnel" allow="clipboard-write"></iframe>
+<button class="reset" id="reset">Reset setup</button>
+
+<script>
+  const store = {
+    get(k) { try { return localStorage.getItem(k); } catch (e) { return null; } },
+    set(k, v) { try { localStorage.setItem(k, v); } catch (e) {} },
+    del(k) { try { localStorage.removeItem(k); } catch (e) {} },
+  };
+
+  function open() {
+    const url = store.get('tf_url'), key = store.get('tf_key');
+    if (!url || !key) {
+      document.getElementById('setup').style.display = 'block';
+      return;
+    }
+    const frame = document.getElementById('app');
+    frame.src = url + (url.includes('?') ? '&' : '?') + 'key=' + encodeURIComponent(key);
+    frame.style.display = 'block';
+  }
+
+  document.getElementById('save').addEventListener('click', () => {
+    const url = document.getElementById('url').value.trim();
+    const key = document.getElementById('key').value.trim();
+    if (!/^https:\/\/script\.google\.com\/.+\/exec$/.test(url) || !key) {
+      alert('Check the URL (it must end in /exec) and the key.');
+      return;
+    }
+    store.set('tf_url', url); store.set('tf_key', key);
+    document.getElementById('setup').style.display = 'none';
+    open();
+  });
+
+  // Long-press the top-left corner for 2 seconds to show "Reset setup" (e.g. after a new key).
+  let t;
+  document.addEventListener('touchstart', e => {
+    const p = e.touches[0];
+    if (p.clientX < 40 && p.clientY < 40) t = setTimeout(() => {
+      document.getElementById('reset').style.display = 'block';
+    }, 2000);
+  });
+  document.addEventListener('touchend', () => clearTimeout(t));
+  document.getElementById('reset').addEventListener('click', () => {
+    store.del('tf_url'); store.del('tf_key'); location.reload();
+  });
+
+  if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js');
+  open();
+</script>
+</body>
+</html>
